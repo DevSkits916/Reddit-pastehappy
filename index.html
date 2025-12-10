@@ -317,6 +317,8 @@
         </div>
         <button id="importBtn" class="accent">Import CSV</button>
         <button id="exportBtn" class="secondary" disabled>Export updated CSV</button>
+        <button id="sampleBtn" class="secondary">Download sample CSV</button>
+        <button id="userscriptBtn" class="secondary">Download Reddit scraper userscript</button>
         <button id="jumpBtn" class="secondary" disabled>Jump to next unposted</button>
         <div class="counter">
           <span>Total: <strong id="totalCount">0</strong></span>
@@ -363,6 +365,8 @@
     const fileInput = document.getElementById('csvFile');
     const importBtn = document.getElementById('importBtn');
     const exportBtn = document.getElementById('exportBtn');
+    const sampleBtn = document.getElementById('sampleBtn');
+    const userscriptBtn = document.getElementById('userscriptBtn');
     const jumpBtn = document.getElementById('jumpBtn');
     const totalCount = document.getElementById('totalCount');
     const remainingCount = document.getElementById('remainingCount');
@@ -705,8 +709,8 @@
       return str;
     }
 
-    function triggerDownload(content, filename) {
-      const blob = new Blob([content], { type: 'text/csv;charset=utf-8;' });
+    function triggerDownload(content, filename, type = 'text/csv;charset=utf-8;') {
+      const blob = new Blob([content], { type });
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
@@ -715,6 +719,17 @@
       a.click();
       document.body.removeChild(a);
       URL.revokeObjectURL(url);
+    }
+
+    async function downloadAsset(path, filename, mimeType) {
+      try {
+        const res = await fetch(path);
+        if (!res.ok) throw new Error(`Failed to download ${filename}`);
+        const content = await res.text();
+        triggerDownload(content, filename, mimeType);
+      } catch (err) {
+        alert(err.message);
+      }
     }
 
     function handleImport() {
@@ -742,6 +757,8 @@
 
     importBtn.addEventListener('click', handleImport);
     exportBtn.addEventListener('click', handleExport);
+    sampleBtn.addEventListener('click', () => downloadAsset('sample.csv', 'reddit_sample_queue.csv', 'text/csv;charset=utf-8;'));
+    userscriptBtn.addEventListener('click', () => downloadAsset('reddit-explore-exporter.user.js', 'reddit-explore-exporter.user.js', 'text/plain;charset=utf-8;'));
     jumpBtn.addEventListener('click', jumpToNextUnposted);
     copyOpenBtn.addEventListener('click', copyActiveRow);
     markPostedBtn.addEventListener('click', () => markActiveRow(true));

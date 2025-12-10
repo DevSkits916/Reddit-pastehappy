@@ -1,0 +1,682 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>PasteHappy for Reddit</title>
+  <style>
+    :root {
+      color-scheme: light;
+      --bg: #f7f7fb;
+      --card: #ffffff;
+      --text: #1f2933;
+      --muted: #566573;
+      --accent: #ff4500;
+      --border: #e1e8ed;
+      --success: #1b873a;
+      --danger: #c92a2a;
+      --warning: #f0ad4e;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      font-family: "Inter", system-ui, -apple-system, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.5;
+    }
+
+    header {
+      padding: 1.5rem 1.25rem 0.5rem;
+    }
+
+    h1 {
+      margin: 0;
+      font-size: 1.8rem;
+      letter-spacing: -0.5px;
+    }
+
+    p.description {
+      margin: 0.35rem 0 0;
+      color: var(--muted);
+      max-width: 800px;
+    }
+
+    main {
+      padding: 0 1.25rem 2rem;
+    }
+
+    .card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 1rem;
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.04);
+      margin-bottom: 1rem;
+    }
+
+    .controls {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.75rem;
+      align-items: center;
+    }
+
+    .controls label {
+      font-weight: 600;
+      color: var(--text);
+    }
+
+    .controls input[type="file"] {
+      max-width: 240px;
+    }
+
+    button {
+      border: none;
+      border-radius: 8px;
+      padding: 0.6rem 0.95rem;
+      background: var(--text);
+      color: #fff;
+      font-weight: 600;
+      cursor: pointer;
+      transition: transform 0.1s ease, box-shadow 0.1s ease, background 0.2s;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.3rem;
+    }
+
+    button:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 6px 16px rgba(0, 0, 0, 0.12);
+    }
+
+    button.secondary {
+      background: #fff;
+      color: var(--text);
+      border: 1px solid var(--border);
+    }
+
+    button.accent {
+      background: var(--accent);
+    }
+
+    button.success {
+      background: var(--success);
+    }
+
+    button.danger {
+      background: var(--danger);
+    }
+
+    button:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+      transform: none;
+      box-shadow: none;
+    }
+
+    .counter {
+      margin-left: auto;
+      display: flex;
+      gap: 0.75rem;
+      flex-wrap: wrap;
+      font-weight: 600;
+      color: var(--muted);
+    }
+
+    .counter span strong {
+      color: var(--text);
+    }
+
+    .table-wrapper {
+      overflow-x: auto;
+      border-radius: 12px;
+      border: 1px solid var(--border);
+      background: var(--card);
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      min-width: 820px;
+    }
+
+    th, td {
+      padding: 0.75rem;
+      text-align: left;
+      border-bottom: 1px solid var(--border);
+      vertical-align: top;
+    }
+
+    th {
+      background: #f0f4f8;
+      font-size: 0.95rem;
+      color: #32475b;
+      position: sticky;
+      top: 0;
+      z-index: 1;
+    }
+
+    tr.active {
+      outline: 2px solid var(--accent);
+      outline-offset: -2px;
+    }
+
+    tr.posted {
+      background: #f5f8f6;
+      opacity: 0.7;
+    }
+
+    td.actions {
+      display: flex;
+      gap: 0.4rem;
+      flex-wrap: wrap;
+    }
+
+    td .pill {
+      display: inline-block;
+      padding: 0.25rem 0.55rem;
+      border-radius: 999px;
+      font-size: 0.78rem;
+      font-weight: 700;
+      letter-spacing: 0.02em;
+      color: #fff;
+    }
+
+    .pill.yes {
+      background: var(--success);
+    }
+
+    .pill.no {
+      background: var(--warning);
+      color: #1f1f1f;
+    }
+
+    .link {
+      color: var(--accent);
+      text-decoration: none;
+      font-weight: 600;
+      word-break: break-all;
+    }
+
+    .post-preview {
+      font-size: 0.95rem;
+      color: var(--muted);
+    }
+
+    .post-preview button {
+      padding: 0.3rem 0.5rem;
+      font-size: 0.8rem;
+    }
+
+    .issues, .helpers {
+      margin-top: 0.5rem;
+      color: var(--muted);
+      font-size: 0.95rem;
+    }
+
+    .issues ul {
+      margin: 0.35rem 0 0;
+      padding-left: 1rem;
+    }
+
+    .helpers {
+      display: flex;
+      gap: 0.75rem;
+      flex-wrap: wrap;
+    }
+
+    .helpers code {
+      background: #eef2f7;
+      padding: 0.15rem 0.35rem;
+      border-radius: 6px;
+    }
+
+    @media (max-width: 720px) {
+      header {
+        padding-bottom: 0.1rem;
+      }
+
+      .controls {
+        flex-direction: column;
+        align-items: flex-start;
+      }
+
+      .counter {
+        margin-left: 0;
+      }
+
+      button {
+        width: 100%;
+        justify-content: center;
+      }
+
+      td.actions {
+        flex-direction: column;
+      }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>PasteHappy for Reddit</h1>
+    <p class="description">Import a CSV of Reddit communities, copy posts to clipboard, and open each community in a new tab to post.</p>
+  </header>
+
+  <main>
+    <section class="card">
+      <div class="controls">
+        <div>
+          <label for="csvFile">CSV file</label><br />
+          <input type="file" id="csvFile" accept=".csv" />
+        </div>
+        <button id="importBtn" class="accent">Import CSV</button>
+        <button id="exportBtn" class="secondary" disabled>Export updated CSV</button>
+        <button id="jumpBtn" class="secondary" disabled>Jump to next unposted</button>
+        <div class="counter">
+          <span>Total: <strong id="totalCount">0</strong></span>
+          <span>Remaining: <strong id="remainingCount">0</strong></span>
+          <span>Posted: <strong id="postedCount">0</strong></span>
+        </div>
+      </div>
+      <div class="helpers">
+        <span>Shortcuts: <code>Enter</code> to copy & open, <code>P</code> to toggle posted (when a row is active).</span>
+      </div>
+      <div class="issues" id="issueBox" hidden>
+        <strong>Issues / skipped rows:</strong>
+        <ul id="issueList"></ul>
+      </div>
+    </section>
+
+    <section class="table-wrapper" aria-live="polite">
+      <table id="queueTable">
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>Community name</th>
+            <th>URL</th>
+            <th>Post</th>
+            <th>Posted</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody id="tableBody"></tbody>
+      </table>
+    </section>
+  </main>
+
+  <script>
+    const fileInput = document.getElementById('csvFile');
+    const importBtn = document.getElementById('importBtn');
+    const exportBtn = document.getElementById('exportBtn');
+    const jumpBtn = document.getElementById('jumpBtn');
+    const totalCount = document.getElementById('totalCount');
+    const remainingCount = document.getElementById('remainingCount');
+    const postedCount = document.getElementById('postedCount');
+    const tableBody = document.getElementById('tableBody');
+    const issueBox = document.getElementById('issueBox');
+    const issueList = document.getElementById('issueList');
+
+    const ROW_PREVIEW_LIMIT = 120;
+
+    let rows = [];
+    let headers = [];
+    let hasPostedColumn = false;
+    let activeIndex = -1;
+    let postedHeaderNames = [];
+
+    function normalizeHeader(name = '') {
+      return name.toLowerCase().replace(/\s+/g, '').replace(/_/g, '');
+    }
+
+    const headerMap = {
+      community_name: ['communityname', 'community', 'community_name'],
+      url: ['url', 'link'],
+      post: ['post', 'text', 'content'],
+      category: ['category'],
+      notes: ['notes', 'note'],
+      posted: ['posted', 'status']
+    };
+
+    function findCanonical(header) {
+      const normalized = normalizeHeader(header);
+      for (const [key, aliases] of Object.entries(headerMap)) {
+        if (aliases.includes(normalized)) return key;
+      }
+      return null;
+    }
+
+    function parseCSV(text) {
+      const rows = [];
+      let current = '';
+      let inQuotes = false;
+      const output = [];
+
+      function endValue() {
+        rows.push(current);
+        current = '';
+      }
+
+      function endRow() {
+        output.push(rows.slice());
+        rows.length = 0;
+      }
+
+      for (let i = 0; i < text.length; i++) {
+        const char = text[i];
+        if (char === '"') {
+          if (inQuotes && text[i + 1] === '"') {
+            current += '"';
+            i++;
+          } else {
+            inQuotes = !inQuotes;
+          }
+        } else if (char === ',' && !inQuotes) {
+          endValue();
+        } else if ((char === '\n' || char === '\r') && !inQuotes) {
+          if (char === '\r' && text[i + 1] === '\n') i++;
+          endValue();
+          endRow();
+        } else {
+          current += char;
+        }
+      }
+      endValue();
+      endRow();
+      if (output.length && output[output.length - 1].length === 1 && output[output.length - 1][0] === '') {
+        output.pop();
+      }
+      return output;
+    }
+
+    function trim(value) {
+      return (value || '').toString().trim();
+    }
+
+    function updateCounters() {
+      const posted = rows.filter(r => (r.posted || '').toLowerCase() === 'yes').length;
+      totalCount.textContent = rows.length;
+      postedCount.textContent = posted;
+      remainingCount.textContent = rows.length - posted;
+    }
+
+    function renderTable() {
+      tableBody.innerHTML = '';
+      rows.forEach((row, idx) => {
+        const tr = document.createElement('tr');
+        tr.dataset.index = idx;
+        if ((row.posted || '').toLowerCase() === 'yes') tr.classList.add('posted');
+        if (idx === activeIndex) tr.classList.add('active');
+
+        const postedDisplay = (row.posted || '').toLowerCase() === 'yes' ? 'Yes' : 'No';
+
+        const preview = row.post.length > ROW_PREVIEW_LIMIT ?
+          `${row.post.slice(0, ROW_PREVIEW_LIMIT)}…` : row.post;
+
+        tr.innerHTML = `
+          <td>${idx + 1}</td>
+          <td>${row.community_name || ''}</td>
+          <td><a class="link" href="${row.url}" target="_blank" rel="noopener noreferrer">${row.url}</a></td>
+          <td>
+            <div class="post-preview" data-full="${encodeURIComponent(row.post)}">
+              <span class="preview-text">${escapeHtml(preview)}</span>
+              ${row.post.length > ROW_PREVIEW_LIMIT ? `<button class="secondary small" data-action="toggle">View full</button>` : ''}
+              <div class="full-text" hidden>${escapeHtml(row.post)}</div>
+            </div>
+          </td>
+          <td><span class="pill ${postedDisplay === 'Yes' ? 'yes' : 'no'}">${postedDisplay}</span></td>
+          <td class="actions">
+            <button class="accent" data-action="copy">Copy & open</button>
+            <button class="success" data-action="mark-posted">Mark posted</button>
+            <button class="secondary" data-action="mark-unposted">Mark not posted</button>
+          </td>
+        `;
+
+        tr.addEventListener('click', () => setActiveRow(idx));
+        tr.addEventListener('keydown', (e) => handleRowKeydown(e, idx));
+        tr.querySelectorAll('button').forEach(btn => {
+          btn.addEventListener('click', (e) => handleAction(e, idx));
+        });
+
+        tableBody.appendChild(tr);
+      });
+      updateCounters();
+      exportBtn.disabled = rows.length === 0;
+      jumpBtn.disabled = rows.length === 0 || rows.every(r => (r.posted || '').toLowerCase() === 'yes');
+    }
+
+    function escapeHtml(str) {
+      return str.replace(/[&<>\"']/g, (c) => ({
+        '&': '&amp;',
+        '<': '&lt;',
+        '>': '&gt;',
+        '"': '&quot;',
+        "'": '&#39;'
+      })[c]);
+    }
+
+    function handleAction(event, idx) {
+      const action = event.target.dataset.action;
+      event.stopPropagation();
+      setActiveRow(idx);
+      if (action === 'copy') {
+        copyAndOpen(rows[idx]);
+      } else if (action === 'mark-posted') {
+        markPosted(idx, true);
+      } else if (action === 'mark-unposted') {
+        markPosted(idx, false);
+      } else if (action === 'toggle') {
+        togglePreview(event.target.closest('.post-preview'));
+      }
+    }
+
+    function handleRowKeydown(event, idx) {
+      if (['INPUT', 'TEXTAREA'].includes(document.activeElement.tagName)) return;
+      if (event.key === 'Enter') {
+        event.preventDefault();
+        copyAndOpen(rows[idx]);
+      } else if (event.key.toLowerCase() === 'p') {
+        event.preventDefault();
+        markPosted(idx, (rows[idx].posted || '').toLowerCase() !== 'yes');
+      }
+    }
+
+    function togglePreview(container) {
+      if (!container) return;
+      const full = container.querySelector('.full-text');
+      const btn = container.querySelector('button[data-action="toggle"]');
+      if (full.hasAttribute('hidden')) {
+        full.removeAttribute('hidden');
+        btn.textContent = 'Hide';
+      } else {
+        full.setAttribute('hidden', 'true');
+        btn.textContent = 'View full';
+      }
+    }
+
+    async function copyAndOpen(row) {
+      const text = row.post || '';
+      try {
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+          await navigator.clipboard.writeText(text);
+        } else {
+          const textarea = document.createElement('textarea');
+          textarea.value = text;
+          document.body.appendChild(textarea);
+          textarea.select();
+          document.execCommand('copy');
+          document.body.removeChild(textarea);
+        }
+      } catch (err) {
+        alert('Could not copy to clipboard.');
+      }
+      window.open(row.url, '_blank');
+    }
+
+    function markPosted(idx, status) {
+      rows[idx].posted = status ? 'yes' : '';
+      postedHeaderNames.forEach(name => rows[idx].raw[name] = rows[idx].posted);
+      if (!postedHeaderNames.length) rows[idx].raw['posted'] = rows[idx].posted;
+      renderTable();
+    }
+
+    function setActiveRow(idx) {
+      activeIndex = idx;
+      renderTable();
+      const rowEl = tableBody.querySelector(`tr[data-index="${idx}"]`);
+      if (rowEl) rowEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+
+    function jumpToNextUnposted() {
+      const nextIdx = rows.findIndex((row, i) => (row.posted || '').toLowerCase() !== 'yes' && i > activeIndex);
+      if (nextIdx !== -1) {
+        setActiveRow(nextIdx);
+      } else {
+        const first = rows.findIndex(row => (row.posted || '').toLowerCase() !== 'yes');
+        if (first !== -1) setActiveRow(first);
+      }
+    }
+
+    function showIssues(messages) {
+      issueList.innerHTML = '';
+      messages.forEach(msg => {
+        const li = document.createElement('li');
+        li.textContent = msg;
+        issueList.appendChild(li);
+      });
+      issueBox.hidden = messages.length === 0;
+    }
+
+    function processCSV(text) {
+      const parsed = parseCSV(text);
+      if (!parsed.length) throw new Error('CSV appears to be empty.');
+      headers = parsed[0];
+      if (!headers.length) throw new Error('Missing header row.');
+
+      const canonicalHeaders = headers.map(findCanonical);
+      const urlIdx = canonicalHeaders.indexOf('url');
+      const postIdx = canonicalHeaders.indexOf('post');
+      const postedIdx = canonicalHeaders.indexOf('posted');
+      if (urlIdx === -1 || postIdx === -1) {
+        throw new Error('CSV must include url and post columns.');
+      }
+      hasPostedColumn = postedIdx !== -1;
+      postedHeaderNames = headers.filter((h, i) => canonicalHeaders[i] === 'posted');
+
+      const issues = [];
+      rows = [];
+      for (let i = 1; i < parsed.length; i++) {
+        const row = parsed[i];
+        if (row.length === 1 && trim(row[0]) === '') continue;
+        const raw = {};
+        headers.forEach((h, idx) => raw[h] = row[idx] !== undefined ? row[idx] : '');
+
+        const url = trim(row[urlIdx]);
+        const post = trim(row[postIdx]);
+        if (!url || !post) {
+          issues.push(`Row ${i + 1} skipped: missing required url or post.`);
+          continue;
+        }
+
+        const entry = {
+          raw,
+          community_name: canonicalHeaders.indexOf('community_name') !== -1 ? trim(row[canonicalHeaders.indexOf('community_name')]) : '',
+          url,
+          post,
+          category: canonicalHeaders.indexOf('category') !== -1 ? trim(row[canonicalHeaders.indexOf('category')]) : '',
+          notes: canonicalHeaders.indexOf('notes') !== -1 ? trim(row[canonicalHeaders.indexOf('notes')]) : '',
+          posted: postedIdx !== -1 ? trim(row[postedIdx]).toLowerCase() === 'yes' ? 'yes' : trim(row[postedIdx]) : ''
+        };
+
+        postedHeaderNames.forEach(name => entry.raw[name] = entry.posted);
+        if (!postedHeaderNames.length) entry.raw['posted'] = entry.posted;
+        rows.push(entry);
+      }
+
+      showIssues(issues);
+      activeIndex = rows.findIndex(r => (r.posted || '').toLowerCase() !== 'yes');
+      renderTable();
+    }
+
+    function buildCSV() {
+      const exportHeaders = headers.slice();
+      if (!hasPostedColumn) exportHeaders.push('posted');
+
+      const lines = [exportHeaders.join(',')];
+      rows.forEach(row => {
+        const values = exportHeaders.map(h => {
+          let val = row.raw[h];
+          if (val === undefined && h === 'posted') val = row.posted || '';
+          return escapeCsv(val ?? '');
+        });
+        lines.push(values.join(','));
+      });
+      return lines.join('\n');
+    }
+
+    function escapeCsv(value) {
+      const str = value.toString();
+      if (/[",\n\r]/.test(str)) {
+        return '"' + str.replace(/"/g, '""') + '"';
+      }
+      return str;
+    }
+
+    function triggerDownload(content, filename) {
+      const blob = new Blob([content], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    }
+
+    function handleImport() {
+      const file = fileInput.files[0];
+      if (!file) {
+        alert('Please select a CSV file first.');
+        return;
+      }
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        try {
+          processCSV(e.target.result);
+        } catch (err) {
+          alert(err.message);
+        }
+      };
+      reader.readAsText(file);
+    }
+
+    function handleExport() {
+      if (!rows.length) return;
+      const csv = buildCSV();
+      triggerDownload(csv, 'reddit_queue_updated.csv');
+    }
+
+    importBtn.addEventListener('click', handleImport);
+    exportBtn.addEventListener('click', handleExport);
+    jumpBtn.addEventListener('click', jumpToNextUnposted);
+
+    document.addEventListener('keydown', (e) => {
+      const targetTag = document.activeElement.tagName;
+      if (['INPUT', 'TEXTAREA', 'SELECT'].includes(targetTag)) return;
+      if (activeIndex === -1) return;
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        copyAndOpen(rows[activeIndex]);
+      } else if (e.key.toLowerCase() === 'p') {
+        e.preventDefault();
+        markPosted(activeIndex, (rows[activeIndex].posted || '').toLowerCase() !== 'yes');
+      }
+    });
+  </script>
+</body>
+</html>

@@ -1,0 +1,479 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Reddit Crowd-Surf Tool</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
+  <style>
+    :root {
+      --bg: #f6f8fb;
+      --panel: #ffffff;
+      --border: #d6d9e0;
+      --accent: #2563eb;
+      --accent-soft: #e3ebff;
+      --text: #0f172a;
+      --muted: #4b5563;
+      --success: #22c55e33;
+      --success-strong: #16a34a;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      padding: 24px;
+    }
+
+    header {
+      margin-bottom: 20px;
+    }
+
+    h1 {
+      margin: 0 0 6px;
+      font-size: 28px;
+      letter-spacing: -0.4px;
+    }
+
+    p.subtitle {
+      margin: 0;
+      color: var(--muted);
+    }
+
+    .card {
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 16px 18px;
+      box-shadow: 0 6px 12px rgba(15,23,42,0.06);
+    }
+
+    .controls {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      align-items: center;
+      margin-bottom: 12px;
+    }
+
+    .controls label {
+      font-weight: 600;
+      margin-right: 8px;
+    }
+
+    .btn {
+      border: 1px solid var(--border);
+      background: var(--panel);
+      color: var(--text);
+      padding: 10px 14px;
+      border-radius: 8px;
+      cursor: pointer;
+      font-weight: 600;
+      transition: all 0.15s ease;
+    }
+
+    .btn-primary {
+      background: var(--accent);
+      color: white;
+      border-color: var(--accent);
+    }
+
+    .btn-ghost {
+      background: transparent;
+    }
+
+    .btn:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+    }
+
+    .btn:hover:not(:disabled) {
+      transform: translateY(-1px);
+      box-shadow: 0 6px 10px rgba(37,99,235,0.16);
+    }
+
+    .progress-wrap {
+      margin: 12px 0 20px;
+    }
+
+    .progress-text {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 6px;
+      color: var(--muted);
+      font-weight: 600;
+    }
+
+    .progress-bar {
+      width: 100%;
+      height: 12px;
+      background: #e5e7eb;
+      border-radius: 999px;
+      overflow: hidden;
+      border: 1px solid var(--border);
+    }
+
+    .progress-fill {
+      height: 100%;
+      width: 0%;
+      background: linear-gradient(90deg, var(--accent), #3b82f6);
+      transition: width 0.25s ease;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 14px;
+    }
+
+    th, td {
+      border-bottom: 1px solid var(--border);
+      padding: 12px 10px;
+      text-align: left;
+      vertical-align: top;
+    }
+
+    thead tr {
+      background: var(--accent-soft);
+    }
+
+    tbody tr:nth-child(odd) {
+      background: #f9fafb;
+    }
+
+    tbody tr.posted {
+      background: var(--success);
+      opacity: 0.9;
+    }
+
+    .status-chip {
+      padding: 4px 8px;
+      border-radius: 999px;
+      font-weight: 700;
+      font-size: 12px;
+      display: inline-block;
+    }
+
+    .status-pending {
+      background: #fef3c7;
+      color: #b45309;
+      border: 1px solid #fbbf24;
+    }
+
+    .status-posted {
+      background: #dcfce7;
+      color: #15803d;
+      border: 1px solid #16a34a;
+    }
+
+    .post-preview {
+      max-width: 380px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      color: var(--muted);
+    }
+
+    .actions {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .message {
+      margin-top: 8px;
+      color: #b91c1c;
+      font-weight: 600;
+    }
+
+    @media (max-width: 900px) {
+      table {
+        font-size: 13px;
+      }
+      .post-preview {
+        max-width: 240px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>Reddit Crowd-Surf Tool</h1>
+    <p class="subtitle">Import a CSV of Reddit communities and post your GoFundMe messages quickly.</p>
+  </header>
+
+  <section class="card">
+    <div class="controls">
+      <div>
+        <label for="csvInput">Import CSV</label>
+        <input type="file" id="csvInput" accept=".csv" />
+      </div>
+      <button id="exportBtn" class="btn btn-primary">Export CSV</button>
+      <button id="resetBtn" class="btn btn-ghost">Reset Progress</button>
+      <span id="message" class="message"></span>
+    </div>
+
+    <div class="progress-wrap">
+      <div class="progress-text">
+        <span id="progressLabel">Posted 0 of 0 communities</span>
+        <span id="progressPercent">0%</span>
+      </div>
+      <div class="progress-bar">
+        <div id="progressFill" class="progress-fill"></div>
+      </div>
+    </div>
+
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Status</th>
+            <th>Community Name</th>
+            <th>URL</th>
+            <th>Post Preview</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody id="tableBody">
+          <tr>
+            <td colspan="5" style="text-align:center; color: var(--muted); padding: 18px;">Import a CSV to get started.</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <script>
+    const REQUIRED_HEADERS = ["Community Name", "URL", "Member Status", "post"];
+    let tableData = [];
+
+    const csvInput = document.getElementById('csvInput');
+    const tableBody = document.getElementById('tableBody');
+    const messageEl = document.getElementById('message');
+    const progressLabel = document.getElementById('progressLabel');
+    const progressPercent = document.getElementById('progressPercent');
+    const progressFill = document.getElementById('progressFill');
+    const exportBtn = document.getElementById('exportBtn');
+    const resetBtn = document.getElementById('resetBtn');
+
+    csvInput.addEventListener('change', (e) => {
+      const file = e.target.files[0];
+      if (!file) return;
+      loadCSV(file);
+    });
+
+    exportBtn.addEventListener('click', () => {
+      if (!tableData.length) return setMessage('Import data before exporting.');
+      exportCSV();
+    });
+
+    resetBtn.addEventListener('click', () => {
+      clearProgress();
+      renderTable(tableData);
+      setMessage('Progress reset.');
+    });
+
+    function setMessage(text, isError = false) {
+      messageEl.textContent = text;
+      messageEl.style.color = isError ? '#b91c1c' : '#15803d';
+      if (!text) return;
+      setTimeout(() => { messageEl.textContent = ''; }, 3200);
+    }
+
+    function loadCSV(file) {
+      Papa.parse(file, {
+        header: true,
+        skipEmptyLines: true,
+        complete: (results) => {
+          if (results.errors?.length) {
+            setMessage('Error parsing CSV. Please check the file.', true);
+            return;
+          }
+
+          const headers = results.meta?.fields || [];
+          const missing = REQUIRED_HEADERS.filter(h => !headers.includes(h));
+          if (missing.length) {
+            setMessage(`Missing required columns: ${missing.join(', ')}`, true);
+            return;
+          }
+
+          tableData = results.data.map(row => ({
+            "Community Name": row["Community Name"] || '',
+            "URL": row["URL"] || '',
+            "Member Status": row["Member Status"] || '',
+            "post": row["post"] || ''
+          }));
+
+          renderTable(tableData);
+          setMessage(`Loaded ${tableData.length} rows.`);
+        }
+      });
+    }
+
+    function renderTable(data) {
+      tableBody.innerHTML = '';
+      if (!data.length) {
+        tableBody.innerHTML = '<tr><td colspan="5" style="text-align:center; color: var(--muted); padding: 18px;">Import a CSV to get started.</td></tr>';
+        updateProgress();
+        return;
+      }
+
+      data.forEach((row, idx) => {
+        const tr = document.createElement('tr');
+        const isPosted = getPostedState(row);
+        if (isPosted) tr.classList.add('posted');
+
+        const statusTd = document.createElement('td');
+        const statusChip = document.createElement('span');
+        statusChip.className = `status-chip ${isPosted ? 'status-posted' : 'status-pending'}`;
+        statusChip.textContent = isPosted ? 'Posted' : 'Pending';
+        statusTd.appendChild(statusChip);
+
+        const nameTd = document.createElement('td');
+        nameTd.textContent = row['Community Name'];
+
+        const urlTd = document.createElement('td');
+        if (row.URL) {
+          const link = document.createElement('a');
+          link.href = row.URL;
+          link.target = '_blank';
+          link.rel = 'noopener noreferrer';
+          link.textContent = row.URL;
+          urlTd.appendChild(link);
+        } else {
+          urlTd.textContent = '—';
+        }
+
+        const postTd = document.createElement('td');
+        const preview = document.createElement('span');
+        preview.className = 'post-preview';
+        preview.title = row.post;
+        preview.textContent = row.post || '—';
+        postTd.appendChild(preview);
+
+        const actionsTd = document.createElement('td');
+        actionsTd.className = 'actions';
+
+        const copyBtn = document.createElement('button');
+        copyBtn.className = 'btn btn-primary';
+        copyBtn.textContent = 'Copy & Open';
+        copyBtn.addEventListener('click', () => {
+          handleCopyAndOpen(row);
+        });
+
+        const markBtn = document.createElement('button');
+        markBtn.className = 'btn';
+        markBtn.textContent = 'Mark Posted';
+        markBtn.addEventListener('click', () => {
+          markRowPosted(idx);
+        });
+
+        actionsTd.append(copyBtn, markBtn);
+
+        tr.append(statusTd, nameTd, urlTd, postTd, actionsTd);
+        tableBody.appendChild(tr);
+      });
+
+      updateProgress();
+    }
+
+    function handleCopyAndOpen(row) {
+      if (!row.post) {
+        setMessage('No post text to copy.', true);
+        return;
+      }
+      navigator.clipboard.writeText(row.post)
+        .then(() => {
+          if (row.URL) window.open(row.URL, '_blank');
+          setMessage('Post copied to clipboard.');
+        })
+        .catch(() => {
+          setMessage('Clipboard copy failed.', true);
+        });
+    }
+
+    function rowKey(row) {
+      return `reddit_crowdsurf_posted::${row.URL || ''}::${simpleHash(row.post || '')}`;
+    }
+
+    function getPostedState(row) {
+      const key = rowKey(row);
+      return localStorage.getItem(key) === 'posted';
+    }
+
+    function markRowPosted(index) {
+      const row = tableData[index];
+      if (!row) return;
+      const key = rowKey(row);
+      localStorage.setItem(key, 'posted');
+      renderTable(tableData);
+      setMessage(`Marked ${row['Community Name'] || 'row'} as posted.`);
+    }
+
+    function updateProgress() {
+      const total = tableData.length;
+      let posted = 0;
+      tableData.forEach(row => { if (getPostedState(row)) posted += 1; });
+      const percent = total ? Math.round((posted / total) * 100) : 0;
+
+      progressLabel.textContent = `Posted ${posted} of ${total} communities`;
+      progressPercent.textContent = `${percent}%`;
+      progressFill.style.width = `${percent}%`;
+    }
+
+    function clearProgress() {
+      const keysToRemove = [];
+      for (let i = 0; i < localStorage.length; i++) {
+        const key = localStorage.key(i);
+        if (key && key.startsWith('reddit_crowdsurf_posted::')) {
+          keysToRemove.push(key);
+        }
+      }
+      keysToRemove.forEach(k => localStorage.removeItem(k));
+      updateProgress();
+    }
+
+    function exportCSV() {
+      const exportRows = tableData.map(row => ({
+        'Community Name': row['Community Name'] || '',
+        'URL': row['URL'] || '',
+        'Member Status': row['Member Status'] || '',
+        'post': row['post'] || ''
+      }));
+
+      const csv = Papa.unparse({
+        fields: REQUIRED_HEADERS,
+        data: exportRows.map(row => [row['Community Name'], row['URL'], row['Member Status'], row['post']])
+      });
+      const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'reddit_export_with_posts_updated.csv';
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    }
+
+    function simpleHash(str) {
+      let hash = 0;
+      for (let i = 0; i < str.length; i++) {
+        hash = ((hash << 5) - hash) + str.charCodeAt(i);
+        hash |= 0;
+      }
+      return Math.abs(hash);
+    }
+
+    // Initialize progress bar with any persisted data on load
+    updateProgress();
+  </script>
+</body>
+</html>

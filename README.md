@@ -4,10 +4,17 @@ PasteHappy helps manage Reddit posting queues from a CSV file. Use the buttons a
 
 ## Deploying on Render
 
-A Render blueprint is included for quick deployment as a static site.
+A Render blueprint is included for quick deployment as a Node web service.
 
 1. Create a new **Blueprint** on Render and point it to this repository.
-2. Render will read `render.yaml` and provision a static site named **reddit-pastehappy**.
-3. No build step is required; Render will serve the files directly from the repository root.
+2. Render will read `render.yaml`, install dependencies, and start `npm start`.
+3. The service will be reachable on the URL Render provides for the `reddit-pastehappy` web service.
 
-To preview locally, open `index.html` in your browser.
+### Local preview
+
+```bash
+npm install
+npm start
+```
+
+Then open http://localhost:3000 to use the app.

@@ -1,6 +1,7 @@
 services:
-  - type: static
+  - type: web
     name: reddit-pastehappy
-    env: static
-    buildCommand: ""
-    staticPublishPath: .
+    env: node
+    plan: free
+    buildCommand: npm install
+    startCommand: npm start

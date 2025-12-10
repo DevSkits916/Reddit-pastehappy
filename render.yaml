@@ -1,0 +1,6 @@
+services:
+  - type: static
+    name: reddit-pastehappy
+    env: static
+    buildCommand: ""
+    staticPublishPath: .

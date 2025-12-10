@@ -47,7 +47,7 @@
     }
 
     main {
-      padding: 0 1.25rem 2rem;
+      padding: 0 1.25rem 5.5rem;
     }
 
     .card {
@@ -112,6 +112,11 @@
       background: var(--danger);
     }
 
+    button.small {
+      padding: 0.35rem 0.6rem;
+      font-size: 0.85rem;
+    }
+
     button:disabled {
       opacity: 0.6;
       cursor: not-allowed;
@@ -172,9 +177,8 @@
     }
 
     td.actions {
-      display: flex;
-      gap: 0.4rem;
-      flex-wrap: wrap;
+      color: var(--muted);
+      font-weight: 600;
     }
 
     td .pill {
@@ -236,6 +240,33 @@
       border-radius: 6px;
     }
 
+    .floating-actions {
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      background: rgba(255, 255, 255, 0.95);
+      border-top: 1px solid var(--border);
+      box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.08);
+      padding: 0.75rem 1.25rem;
+      display: flex;
+      gap: 0.75rem;
+      align-items: center;
+      z-index: 20;
+      backdrop-filter: blur(6px);
+    }
+
+    .floating-actions .label {
+      font-weight: 700;
+      color: var(--text);
+      margin-right: 0.25rem;
+    }
+
+    .floating-actions .summary {
+      color: var(--muted);
+      font-size: 0.95rem;
+    }
+
     @media (max-width: 720px) {
       header {
         padding-bottom: 0.1rem;
@@ -257,6 +288,16 @@
 
       td.actions {
         flex-direction: column;
+      }
+
+      .floating-actions {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 0.5rem;
+      }
+
+      .floating-actions button {
+        width: 100%;
       }
     }
   </style>
@@ -307,6 +348,15 @@
         <tbody id="tableBody"></tbody>
       </table>
     </section>
+
+    <div class="floating-actions" aria-live="polite">
+      <span class="label">Row controls:</span>
+      <button id="copyOpenBtn" class="accent">Copy & open</button>
+      <button id="markPostedBtn" class="success">Mark posted</button>
+      <button id="markUnpostedBtn" class="secondary">Mark not posted</button>
+      <button id="skipBtn" class="secondary">Skip</button>
+      <span class="summary" id="activeSummary">No row selected</span>
+    </div>
   </main>
 
   <script>
@@ -320,6 +370,11 @@
     const tableBody = document.getElementById('tableBody');
     const issueBox = document.getElementById('issueBox');
     const issueList = document.getElementById('issueList');
+    const copyOpenBtn = document.getElementById('copyOpenBtn');
+    const markPostedBtn = document.getElementById('markPostedBtn');
+    const markUnpostedBtn = document.getElementById('markUnpostedBtn');
+    const skipBtn = document.getElementById('skipBtn');
+    const activeSummary = document.getElementById('activeSummary');
 
     const ROW_PREVIEW_LIMIT = 120;
 
@@ -429,24 +484,38 @@
             </div>
           </td>
           <td><span class="pill ${postedDisplay === 'Yes' ? 'yes' : 'no'}">${postedDisplay}</span></td>
-          <td class="actions">
-            <button class="accent" data-action="copy">Copy & open</button>
-            <button class="success" data-action="mark-posted">Mark posted</button>
-            <button class="secondary" data-action="mark-unposted">Mark not posted</button>
-          </td>
+          <td class="actions">Use the global controls</td>
         `;
 
         tr.addEventListener('click', () => setActiveRow(idx));
         tr.addEventListener('keydown', (e) => handleRowKeydown(e, idx));
-        tr.querySelectorAll('button').forEach(btn => {
-          btn.addEventListener('click', (e) => handleAction(e, idx));
-        });
+        const toggleBtn = tr.querySelector('button[data-action="toggle"]');
+        if (toggleBtn) {
+          toggleBtn.addEventListener('click', (e) => handleAction(e, idx));
+        }
 
         tableBody.appendChild(tr);
       });
       updateCounters();
       exportBtn.disabled = rows.length === 0;
       jumpBtn.disabled = rows.length === 0 || rows.every(r => (r.posted || '').toLowerCase() === 'yes');
+      updateActionButtons();
+    }
+
+    function updateActionButtons() {
+      const hasActive = rows.length > 0 && activeIndex >= 0 && rows[activeIndex];
+      [copyOpenBtn, markPostedBtn, markUnpostedBtn, skipBtn].forEach(btn => {
+        btn.disabled = !hasActive;
+      });
+
+      if (!hasActive) {
+        activeSummary.textContent = 'No row selected';
+        return;
+      }
+
+      const row = rows[activeIndex];
+      const community = row.community_name || '(no community name)';
+      activeSummary.textContent = `Selected #${activeIndex + 1}: ${community}`;
     }
 
     function escapeHtml(str) {
@@ -463,13 +532,7 @@
       const action = event.target.dataset.action;
       event.stopPropagation();
       setActiveRow(idx);
-      if (action === 'copy') {
-        copyAndOpen(rows[idx]);
-      } else if (action === 'mark-posted') {
-        markPosted(idx, true);
-      } else if (action === 'mark-unposted') {
-        markPosted(idx, false);
-      } else if (action === 'toggle') {
+      if (action === 'toggle') {
         togglePreview(event.target.closest('.post-preview'));
       }
     }
@@ -517,11 +580,21 @@
       window.open(row.url, '_blank');
     }
 
+    function copyActiveRow() {
+      if (activeIndex === -1) return;
+      copyAndOpen(rows[activeIndex]);
+    }
+
     function markPosted(idx, status) {
       rows[idx].posted = status ? 'yes' : '';
       postedHeaderNames.forEach(name => rows[idx].raw[name] = rows[idx].posted);
       if (!postedHeaderNames.length) rows[idx].raw['posted'] = rows[idx].posted;
       renderTable();
+    }
+
+    function markActiveRow(status) {
+      if (activeIndex === -1) return;
+      markPosted(activeIndex, status);
     }
 
     function setActiveRow(idx) {
@@ -539,6 +612,12 @@
         const first = rows.findIndex(row => (row.posted || '').toLowerCase() !== 'yes');
         if (first !== -1) setActiveRow(first);
       }
+    }
+
+    function skipRow() {
+      if (!rows.length) return;
+      const nextIdx = activeIndex + 1 < rows.length ? activeIndex + 1 : 0;
+      setActiveRow(nextIdx);
     }
 
     function showIssues(messages) {
@@ -664,6 +743,10 @@
     importBtn.addEventListener('click', handleImport);
     exportBtn.addEventListener('click', handleExport);
     jumpBtn.addEventListener('click', jumpToNextUnposted);
+    copyOpenBtn.addEventListener('click', copyActiveRow);
+    markPostedBtn.addEventListener('click', () => markActiveRow(true));
+    markUnpostedBtn.addEventListener('click', () => markActiveRow(false));
+    skipBtn.addEventListener('click', skipRow);
 
     document.addEventListener('keydown', (e) => {
       const targetTag = document.activeElement.tagName;
@@ -677,6 +760,8 @@
         markPosted(activeIndex, (rows[activeIndex].posted || '').toLowerCase() !== 'yes');
       }
     });
+
+    updateActionButtons();
   </script>
 </body>
 </html>
